@@ -1,0 +1,23 @@
+DIST-SW-A#show interfaces transceiver detail
+mA: milliamperes, dBm: decibels (milliwatts), NA or N/A: not applicable.
+
+Temperature
+Port       Temperature High Alarm High Warn Low Warn Low Alarm
+Te1/1/1    38.30       89.00      85.00     -5.00    -9.00
+
+Voltage
+Port       Voltage     High Alarm High Warn Low Warn Low Alarm
+Te1/1/1    3.29        3.63       3.60      3.00     2.97
+
+Current
+Port       Current     High Alarm High Warn Low Warn Low Alarm
+Te1/1/1    6.12        12.00      11.00     2.00     1.00
+
+Tx Power
+Port       Tx Power    High Alarm High Warn Low Warn Low Alarm
+Te1/1/1    -5.57       -1.00      -2.00     -8.50    -9.50
+
+Rx Power
+Port       Rx Power    High Alarm High Warn Low Warn Low Alarm
+Te1/1/1    -7.02       0.50       -1.50     -13.40   -14.40
+DIST-SW-A#

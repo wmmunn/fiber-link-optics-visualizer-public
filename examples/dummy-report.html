@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiber Link Optics Report</title>
+<style>
+:root{--ink:#22313a;--muted:#63727a;--line:#c9d3d7;--panel:#fff;--page:#eef2f3;--ok:#bfe8c4;--ok-soft:#eef8ef;--warn:#ffe19a;--alarm:#f4b4ad;--blue:#236b8e;--blue-soft:#e9f4f9}
+*{box-sizing:border-box} body{margin:0;background:var(--page);color:var(--ink);font-family:"Segoe UI",Arial,sans-serif} main{max-width:1500px;margin:0 auto;padding:28px}
+header{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:18px} h1{margin:0 0 5px;font-size:28px} .subtitle{color:var(--muted);font-size:14px}
+.mode{padding:7px 11px;border:1px solid #8eb8cb;border-radius:999px;background:var(--blue-soft);color:#164e69;font-size:12px;font-weight:700;white-space:nowrap}
+.summary{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:10px;margin-bottom:14px} .summary-card{padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.summary-label{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase} .summary-value{margin-top:4px;font-size:16px;font-weight:700}
+.Healthy{color:#246635} .Warning{color:#805c00} .Alarm{color:#8b211b}
+.collection-banner{display:flex;justify-content:center;gap:9px;align-items:baseline;margin-bottom:14px;padding:11px 14px;border:1px solid #8eb8cb;border-radius:8px;background:var(--blue-soft);color:#164e69}
+.collection-banner span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase} .collection-banner strong{font-size:17px} .collection-banner small{color:var(--muted)}
+.link-layout{display:grid;grid-template-columns:minmax(390px,1fr) minmax(245px,.62fr) minmax(390px,1fr);gap:14px;align-items:stretch}
+.panel{overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 2px 8px rgba(33,49,58,.06)} .panel-head{padding:14px 16px;border-bottom:1px solid var(--line);background:#f8fafb}
+.panel-head h2{margin:0;font-size:18px} .endpoint-meta{margin-top:4px;color:var(--muted);font-size:12px} .endpoint-time{margin-top:5px;color:#315b70;font-size:10px;font-weight:700}
+table{width:100%;border-collapse:collapse} th,td{padding:10px 8px;border-bottom:1px solid #e1e7e9;text-align:left;vertical-align:middle;font-size:12px} th{background:#f3f6f7;color:#4a5b64;font-size:10px;letter-spacing:.04em;text-transform:uppercase}
+tr:last-child td{border-bottom:0} .metric{width:76px;font-weight:700} .value{width:72px;font-variant-numeric:tabular-nums;white-space:nowrap} .range-cell{min-width:190px}
+.range{position:relative;display:flex;height:18px;overflow:hidden;border:1px solid #89979d;border-radius:4px} .zone{height:100%} .alarm{background:var(--alarm)} .warning{background:var(--warn)} .normal{background:var(--ok)}
+.marker{position:absolute;top:-3px;width:3px;height:24px;background:#111;box-shadow:0 0 0 1px #fff} .range-labels{display:flex;justify-content:space-between;margin-top:3px;color:var(--muted);font-size:8px;font-variant-numeric:tabular-nums}
+.row-ok td{background:var(--ok-soft)} .row-warn td{background:#fff7d8} .row-alarm td{background:#ffe0dc}
+.data-points{margin:14px;overflow:hidden;border:1px solid var(--line);border-radius:7px} .data-points-title{padding:8px 10px;border-bottom:1px solid var(--line);background:#f3f6f7;color:#4a5b64;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.data-points th,.data-points td{padding:6px 7px;font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right} .data-points th{font-size:8px} .data-points th:first-child,.data-points td:first-child{text-align:left} .data-points tbody tr:nth-child(even) td{background:#f8fafb}
+.directions{display:flex;flex-direction:column;justify-content:center;gap:16px;padding:16px;border:1px solid var(--line);border-radius:10px;background:#f8fafb} .directions-title{text-align:center;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.direction-card{padding:14px;border:1px solid #a9c8d8;border-radius:9px;background:var(--blue-soft)} .direction-warn{border-color:#d8b75c;background:#fff8dd} .direction-alarm{border-color:#d48a83;background:#fff0ee} .direction-missing{border-color:#b5bec2;background:#f1f3f4}
+.direction-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:800} .status-pill{padding:3px 7px;border-radius:999px;background:#d9efdc;color:#246635;font-size:10px} .direction-warn .status-pill{background:#ffe19a;color:#694f18} .direction-alarm .status-pill{background:#f4b4ad;color:#7a1d17} .direction-missing .status-pill{background:#dfe4e6;color:#4f5b57}
+.arrow{margin:12px 0;color:var(--blue);font-size:26px;font-weight:700;letter-spacing:2px;text-align:center} .direction-values{display:grid;grid-template-columns:1fr auto 1fr;gap:7px;align-items:center;text-align:center} .direction-values small{display:block;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase}
+.reading{margin-top:2px;font-size:16px;font-weight:800} .loss{margin-top:12px;padding-top:10px;border-top:1px solid #bfd3dc;text-align:center} .loss strong{display:block;margin-top:2px;font-size:23px;color:#164e69}
+.note{margin-top:14px;padding:11px 13px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);font-size:11px} footer{margin-top:12px;color:var(--muted);font-size:10px;text-align:right}
+@media(max-width:1050px){.link-layout{grid-template-columns:1fr} .directions{order:2} .endpoint-b{order:3} .summary{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<header><div><h1>Fiber Link Optics Report</h1><div class="subtitle">Bidirectional DOM review for a Cisco Catalyst fiber link</div></div><div class="mode">MANUAL LOG IMPORT</div></header>
+<section class="summary">
+  <div class="summary-card"><div class="summary-label">Overall status</div><div class="summary-value Healthy">Healthy</div></div>
+  <div class="summary-card"><div class="summary-label">Endpoint A</div><div class="summary-value">LAB-SW-A &middot; Te1/1/1</div></div>
+  <div class="summary-card"><div class="summary-label">Endpoint B</div><div class="summary-value">LAB-SW-B &middot; Te1/1/1</div></div>
+</section>
+<div class="collection-banner"><span>Latest data timestamp</span><strong>January 15, 2026 at 10:30:18 AM UTC-05:00</strong><small>manual import</small></div>
+<section class="link-layout">
+
+<article class="panel endpoint-a">
+  <div class="panel-head">
+    <h2>Endpoint A</h2>
+    <div class="endpoint-meta">LAB-SW-A &middot; Te1/1/1 &middot; Cisco Catalyst</div>
+    <div class="endpoint-time">Collected: 2026-01-15 10:30:17 UTC-05:00</div>
+  </div>
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th><th>Device Threshold Range</th></tr></thead>
+    <tbody><tr class='row-ok'><td class='metric'>Temperature</td><td class='value'>38.30 C</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:3.14%'></i><i class='zone normal' style='width:70.64%'></i><i class='zone warning' style='width:3.14%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:48.67%'></b></div><div class='range-labels'><span>-9.00 alarm</span><span>-5.00 warn</span><span>85.00 warn</span><span>89.00 alarm</span></div></td></tr><tr class='row-ok'><td class='metric'>Voltage</td><td class='value'>3.29 V</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:3.50%'></i><i class='zone normal' style='width:69.93%'></i><i class='zone warning' style='width:3.50%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:48.83%'></b></div><div class='range-labels'><span>2.97 alarm</span><span>3.00 warn</span><span>3.60 warn</span><span>3.63 alarm</span></div></td></tr><tr class='row-ok'><td class='metric'>Current</td><td class='value'>6.12 mA</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:6.99%'></i><i class='zone normal' style='width:62.94%'></i><i class='zone warning' style='width:6.99%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:47.34%'></b></div><div class='range-labels'><span>1.00 alarm</span><span>2.00 warn</span><span>11.00 warn</span><span>12.00 alarm</span></div></td></tr><tr class='row-ok'><td class='metric'>Tx Power</td><td class='value'>-5.57 dBm</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:9.05%'></i><i class='zone normal' style='width:58.82%'></i><i class='zone warning' style='width:9.05%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:47.10%'></b></div><div class='range-labels'><span>-9.50 alarm</span><span>-8.50 warn</span><span>-2.00 warn</span><span>-1.00 alarm</span></div></td></tr><tr class='row-ok'><td class='metric'>Rx Power</td><td class='value'>-7.02 dBm</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:5.16%'></i><i class='zone normal' style='width:61.44%'></i><i class='zone warning' style='width:10.33%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:49.64%'></b></div><div class='range-labels'><span>-14.40 alarm</span><span>-13.40 warn</span><span>-1.50 warn</span><span>0.50 alarm</span></div></td></tr></tbody>
+  </table>
+  <div class="data-points">
+    <div class="data-points-title">Actual Data Points</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Value</th><th>Low Alarm</th><th>Low Warn</th><th>High Warn</th><th>High Alarm</th></tr></thead>
+      <tbody><tr><td>Temperature</td><td>38.30 C</td><td>-9.00</td><td>-5.00</td><td>85.00</td><td>89.00</td></tr><tr><td>Voltage</td><td>3.29 V</td><td>2.97</td><td>3.00</td><td>3.60</td><td>3.63</td></tr><tr><td>Current</td><td>6.12 mA</td><td>1.00</td><td>2.00</td><td>11.00</td><td>12.00</td></tr><tr><td>Tx Power</td><td>-5.57 dBm</td><td>-9.50</td><td>-8.50</td><td>-2.00</td><td>-1.00</td></tr><tr><td>Rx Power</td><td>-7.02 dBm</td><td>-14.40</td><td>-13.40</td><td>-1.50</td><td>0.50</td></tr></tbody>
+    </table>
+  </div>
+</article>
+
+<section class="directions"><div class="directions-title">Fiber Directions</div>
+<article class="direction-card direction-ok">
+  <div class="direction-head">
+    <span>A to B</span>
+    <span class="status-pill">READINGS OK</span>
+  </div>
+  <div class="arrow">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9654;</div>
+  <div class="direction-values">
+    <div><small>A transmit</small><div class="reading">-5.57</div></div>
+    <div>&rarr;</div>
+    <div><small>B receive</small><div class="reading">-6.74</div></div>
+  </div>
+  <div class="loss"><small>Estimated optical loss</small><strong>1.17 dB</strong></div>
+</article>
+
+<article class="direction-card direction-ok">
+  <div class="direction-head">
+    <span>B to A</span>
+    <span class="status-pill">READINGS OK</span>
+  </div>
+  <div class="arrow">&#9664;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</div>
+  <div class="direction-values">
+    <div><small>A receive</small><div class="reading">-7.02</div></div>
+    <div>&larr;</div>
+    <div><small>B transmit</small><div class="reading">-5.67</div></div>
+  </div>
+  <div class="loss"><small>Estimated optical loss</small><strong>1.35 dB</strong></div>
+</article>
+</section>
+
+<article class="panel endpoint-b">
+  <div class="panel-head">
+    <h2>Endpoint B</h2>
+    <div class="endpoint-meta">LAB-SW-B &middot; Te1/1/1 &middot; Cisco Catalyst</div>
+    <div class="endpoint-time">Collected: 2026-01-15 10:30:18 UTC-05:00</div>
+  </div>
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th><th>Device Threshold Range</th></tr></thead>
+    <tbody><tr class='row-ok'><td class='metric'>Temperature</td><td class='value'>36.80 C</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:3.14%'></i><i class='zone normal' style='width:70.64%'></i><i class='zone warning' style='width:3.14%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:47.49%'></b></div><div class='range-labels'><span>-9.00 alarm</span><span>-5.00 warn</span><span>85.00 warn</span><span>89.00 alarm</span></div></td></tr><tr class='row-ok'><td class='metric'>Voltage</td><td class='value'>3.31 V</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:3.50%'></i><i class='zone normal' style='width:69.93%'></i><i class='zone warning' style='width:3.50%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:51.17%'></b></div><div class='range-labels'><span>2.97 alarm</span><span>3.00 warn</span><span>3.60 warn</span><span>3.63 alarm</span></div></td></tr><tr class='row-ok'><td class='metric'>Current</td><td class='value'>5.94 mA</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:6.99%'></i><i class='zone normal' style='width:62.94%'></i><i class='zone warning' style='width:6.99%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:46.08%'></b></div><div class='range-labels'><span>1.00 alarm</span><span>2.00 warn</span><span>11.00 warn</span><span>12.00 alarm</span></div></td></tr><tr class='row-ok'><td class='metric'>Tx Power</td><td class='value'>-5.67 dBm</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:9.05%'></i><i class='zone normal' style='width:58.82%'></i><i class='zone warning' style='width:9.05%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:46.20%'></b></div><div class='range-labels'><span>-9.50 alarm</span><span>-8.50 warn</span><span>-2.00 warn</span><span>-1.00 alarm</span></div></td></tr><tr class='row-ok'><td class='metric'>Rx Power</td><td class='value'>-6.74 dBm</td><td class='range-cell'><div class='range'><i class='zone alarm' style='width:11.54%'></i><i class='zone warning' style='width:5.16%'></i><i class='zone normal' style='width:61.44%'></i><i class='zone warning' style='width:10.33%'></i><i class='zone alarm' style='width:11.54%'></i><b class='marker' style='left:51.08%'></b></div><div class='range-labels'><span>-14.40 alarm</span><span>-13.40 warn</span><span>-1.50 warn</span><span>0.50 alarm</span></div></td></tr></tbody>
+  </table>
+  <div class="data-points">
+    <div class="data-points-title">Actual Data Points</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Value</th><th>Low Alarm</th><th>Low Warn</th><th>High Warn</th><th>High Alarm</th></tr></thead>
+      <tbody><tr><td>Temperature</td><td>36.80 C</td><td>-9.00</td><td>-5.00</td><td>85.00</td><td>89.00</td></tr><tr><td>Voltage</td><td>3.31 V</td><td>2.97</td><td>3.00</td><td>3.60</td><td>3.63</td></tr><tr><td>Current</td><td>5.94 mA</td><td>1.00</td><td>2.00</td><td>11.00</td><td>12.00</td></tr><tr><td>Tx Power</td><td>-5.67 dBm</td><td>-9.50</td><td>-8.50</td><td>-2.00</td><td>-1.00</td></tr><tr><td>Rx Power</td><td>-6.74 dBm</td><td>-14.40</td><td>-13.40</td><td>-1.50</td><td>0.50</td></tr></tbody>
+    </table>
+  </div>
+</article>
+
+</section>
+<div class="note">Directional loss is estimated from device-reported Tx and remote Rx values. It is not an OTDR measurement and cannot locate a loss event along the fiber path.</div>
+<footer>Timestamp sources: Endpoint A: operator supplied; Endpoint B: operator supplied &middot; Input files: endpoint_a_sanitized.log, endpoint_b_sanitized.log</footer>
+</main></body></html>
