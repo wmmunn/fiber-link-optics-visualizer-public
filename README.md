@@ -1,5 +1,7 @@
 # Fiber Link Optics Visualizer
 
+A practical, operator-focused visualization of Cisco transceiver detail from both ends of a fiber link.
+
 Fiber Link Optics Visualizer turns saved Cisco Catalyst transceiver output
 from both ends of a link into a self-contained HTML report.
 
