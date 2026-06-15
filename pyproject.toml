@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fiber-link-optics-visualizer"
-version = "0.2.0"
-description = "Visualize bidirectional Cisco Catalyst transceiver readings from saved CLI output."
+version = "0.3.2"
+description = "Visualize bidirectional Cisco Catalyst transceiver readings from saved CLI output or optional read-only SSH collection."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -21,7 +21,8 @@ dependencies = []
 
 [project.optional-dependencies]
 gui = ["ttkbootstrap>=1.10"]
-build = ["pyinstaller>=6.0", "ttkbootstrap>=1.10"]
+ssh = ["netmiko>=4.4"]
+build = ["pyinstaller>=6.0", "ttkbootstrap>=1.10", "netmiko>=4.4"]
 
 [project.scripts]
 fiber-optics = "fiber_optics.cli:main"

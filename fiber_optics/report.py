@@ -27,6 +27,15 @@ def _overall_status(endpoints: tuple[EndpointReading, EndpointReading]) -> str:
     return "Healthy"
 
 
+def _collection_mode(endpoints: tuple[EndpointReading, EndpointReading]) -> tuple[str, str]:
+    sources = {endpoint.timestamp_source.lower() for endpoint in endpoints}
+    if sources == {"live ssh collection"}:
+        return "LIVE SSH COLLECTION", "live SSH"
+    if "live ssh collection" in sources:
+        return "MIXED COLLECTION", "mixed collection"
+    return "MANUAL LOG IMPORT", "manual import"
+
+
 def _scale(reading: MetricReading, value: float) -> float:
     span = reading.high_alarm - reading.low_alarm
     if span <= 0:
@@ -161,6 +170,7 @@ def build_html_report(
     directions: tuple[DirectionReading, DirectionReading],
 ) -> str:
     status = _overall_status((endpoint_a, endpoint_b))
+    mode_label, mode_note = _collection_mode((endpoint_a, endpoint_b))
     latest = max(endpoint_a.collected_at, endpoint_b.collected_at)
     timestamp_note = (
         f"Endpoint A: {endpoint_a.timestamp_source}; "
@@ -202,13 +212,13 @@ tr:last-child td{{border-bottom:0}} .metric{{width:76px;font-weight:700}} .value
 </style>
 </head>
 <body><main>
-<header><div><h1>Fiber Link Optics Report</h1><div class="subtitle">Bidirectional DOM review for a Cisco Catalyst fiber link</div></div><div class="mode">MANUAL LOG IMPORT</div></header>
+<header><div><h1>Fiber Link Optics Report</h1><div class="subtitle">Bidirectional DOM review for a Cisco Catalyst fiber link</div></div><div class="mode">{html.escape(mode_label)}</div></header>
 <section class="summary">
   <div class="summary-card"><div class="summary-label">Overall status</div><div class="summary-value {status}">{status}</div></div>
   <div class="summary-card"><div class="summary-label">Endpoint A</div><div class="summary-value">{html.escape(endpoint_a.device)} &middot; {html.escape(endpoint_a.interface)}</div></div>
   <div class="summary-card"><div class="summary-label">Endpoint B</div><div class="summary-value">{html.escape(endpoint_b.device)} &middot; {html.escape(endpoint_b.interface)}</div></div>
 </section>
-<div class="collection-banner"><span>Latest data timestamp</span><strong>{html.escape(_format_time(latest))}</strong><small>manual import</small></div>
+<div class="collection-banner"><span>Latest data timestamp</span><strong>{html.escape(_format_time(latest))}</strong><small>{html.escape(mode_note)}</small></div>
 <section class="link-layout">
 {_endpoint_panel(endpoint_a, "endpoint-a")}
 <section class="directions"><div class="directions-title">Fiber Directions</div>{_direction_card(directions[0], False)}{_direction_card(directions[1], True)}</section>

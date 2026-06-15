@@ -2,8 +2,10 @@
 
 A practical, operator-focused visualization of Cisco transceiver detail from both ends of a fiber link.
 
-Fiber Link Optics Visualizer turns saved Cisco Catalyst transceiver output
-from both ends of a link into a self-contained HTML report.
+Fiber Link Optics Visualizer turns Cisco Catalyst transceiver output from both
+ends of a link into a self-contained HTML report. The default workflow imports
+saved CLI output, and an optional read-only SSH workflow can collect the same
+data from approved lab or operational environments.
 
 The report places the two endpoint threshold graphs side by side with
 bidirectional optical-loss estimates in the middle. It displays temperature,
@@ -17,8 +19,9 @@ at [examples/dummy-report.html](examples/dummy-report.html).
 
 ## Safety and Scope
 
-- Manual log import only
-- No SSH connections
+- Manual log import remains the default workflow
+- Optional read-only SSH collection
+- Operator confirmation before live collection commands
 - No credential collection or storage
 - No device configuration changes
 - Local HTML output
@@ -40,6 +43,15 @@ show interfaces transceiver detail
 It supports common compact threshold tables and normalizes common Cisco
 interface names, including `Gi`, `Te`, and `Twe`.
 
+Optional CDP-assisted discovery uses:
+
+```text
+show cdp neighbors detail
+```
+
+The discovered endpoint pair is displayed for operator review before the tool
+uses it.
+
 ## Quick Start
 
 Python 3.10 or newer is required.
@@ -56,6 +68,12 @@ python -m pip install -e ".[gui]"
 fiber-optics-gui
 ```
 
+Install Netmiko only when you want to use the optional SSH workflow:
+
+```powershell
+python -m pip install -e ".[ssh]"
+```
+
 In the GUI:
 
 1. Select one sanitized or locally collected transceiver log for each endpoint.
@@ -66,6 +84,36 @@ In the GUI:
 
 If a timestamp is omitted, the file modification time is used and identified
 as such in the report.
+
+## Optional Live SSH Workflow
+
+Live SSH collection is designed as an operator-gated convenience, not a
+replacement for approval, change-control, or local security policy.
+
+The workflow is deliberately step-by-step:
+
+1. Enter Endpoint A device, Endpoint A interface, expected Endpoint B device,
+   SSH username, and SSH port.
+2. Select **Connect A** and complete the interactive login flow.
+3. Select **Discover B via CDP** to run `show cdp neighbors detail`.
+4. Review and confirm the discovered B-side device and interface.
+5. Select **Collect A Optics** and confirm the read-only transceiver command.
+6. Select **Connect B** and complete the second interactive login flow.
+7. Select **Collect B Optics** and confirm the read-only transceiver command.
+8. Select **Build Live Report**, then **Export HTML**.
+
+The live collector uses only:
+
+```text
+show cdp neighbors detail
+show interfaces <interface> transceiver detail
+```
+
+MFA and interactive SSH behavior varies by environment. Some SSH gateways
+present MFA prompts through the SSH session, while others require VPN, jump
+hosts, management subnets, or access controls outside this tool. If the SSH
+server cannot be reached, MFA prompts will not appear. Manual import remains
+the fallback path.
 
 ## Sample Data
 
@@ -116,9 +164,10 @@ committed.
 
 ## Privacy
 
-Generated reports contain the endpoint names, interfaces, timestamps, and
-input filenames entered by the operator. Review reports before sharing them.
-Keep raw operational logs in an ignored local `input/` directory.
+Generated reports contain the endpoint names, interfaces, timestamps, input
+filenames, or live command labels entered by the operator. Review reports
+before sharing them. Keep raw operational logs in an ignored local `input/`
+directory.
 
 ## License
 

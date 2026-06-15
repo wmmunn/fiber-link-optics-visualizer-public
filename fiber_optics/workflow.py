@@ -54,6 +54,30 @@ def load_endpoint(
     )
 
 
+def load_endpoint_text(
+    label: str,
+    device: str,
+    interface: str,
+    command_output: str,
+    collected_at: datetime,
+    source_name: str,
+) -> EndpointReading:
+    if not device.strip():
+        raise ValueError(f"{label} device name is required.")
+    if not interface.strip():
+        raise ValueError(f"{label} interface is required.")
+    metrics = parse_cisco_transceiver(command_output, interface)
+    return EndpointReading(
+        label=label,
+        device=device.strip(),
+        interface=normalize_interface(interface),
+        collected_at=collected_at,
+        timestamp_source="live SSH collection",
+        source_file=source_name,
+        metrics=metrics,
+    )
+
+
 def analyze_logs(
     *,
     a_log: Path,

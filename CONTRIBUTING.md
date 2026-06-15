@@ -10,6 +10,9 @@ formats that improve parser coverage.
 - Replace device names, timestamps, interfaces, serial numbers, and identifying
   banners in fixtures.
 - Keep collection behavior read-only and operator initiated.
+- Treat live SSH support as optional; manual import must continue to work.
+- Document MFA or interactive SSH behavior generically, without naming private
+  identity providers or access patterns.
 - Add or update tests for parser and report changes.
 - Keep generated reports, executables, and build output out of commits.
 

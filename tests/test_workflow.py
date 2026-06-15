@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from fiber_optics.workflow import analyze_logs, write_report
+from fiber_optics.workflow import analyze_logs, load_endpoint_text, write_report
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -31,6 +31,27 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(len(endpoint_b.metrics), 5)
         self.assertIn("1.17 dB", report)
         self.assertIn("1.35 dB", report)
+
+    def test_loads_live_ssh_command_text(self) -> None:
+        text = (FIXTURES / "endpoint_a.log").read_text(encoding="utf-8")
+        endpoint = load_endpoint_text(
+            "Endpoint A",
+            "DIST-SW-A",
+            "Te1/1/1",
+            text,
+            endpoint_a_collected_at(),
+            "SSH: show interfaces Te1/1/1 transceiver detail",
+        )
+
+        self.assertEqual(endpoint.timestamp_source, "live SSH collection")
+        self.assertEqual(endpoint.source_file, "SSH: show interfaces Te1/1/1 transceiver detail")
+        self.assertEqual(len(endpoint.metrics), 5)
+
+
+def endpoint_a_collected_at():
+    from datetime import datetime
+
+    return datetime.fromisoformat("2026-06-14T10:30:17-04:00")
 
 
 if __name__ == "__main__":

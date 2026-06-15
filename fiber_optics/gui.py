@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
 import os
 from pathlib import Path
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 try:
     import ttkbootstrap as tb
@@ -14,14 +15,16 @@ except Exception:
     TTKBOOTSTRAP_AVAILABLE = False
 
 from .analysis import build_direction
+from .cdp import find_cdp_link
 from .models import DirectionReading, EndpointReading, MetricReading
 from .interfaces import normalize_interface
 from .parser import ParseError, discover_interfaces
-from .workflow import analyze_logs, write_report
+from .ssh_collector import CiscoSshSession, SshCollectorError, netmiko_available
+from .workflow import analyze_logs, load_endpoint_text, write_report
 
 
 APP_NAME = "Fiber Link Optics Visualizer"
-APP_VERSION = "0.2"
+APP_VERSION = "0.3.2"
 
 
 class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
@@ -43,10 +46,18 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         self.b_device = tk.StringVar()
         self.b_interface = tk.StringVar(value="Te1/1/1")
         self.b_timestamp = tk.StringVar()
+        self.ssh_username = tk.StringVar()
+        self.ssh_port = tk.StringVar(value="22")
+        self.ssh_device_type = tk.StringVar(value="cisco_ios")
+        self.ssh_status = tk.StringVar(
+            value="Live SSH is optional. Manual log import remains available."
+        )
         self.summary_text = tk.StringVar(
             value="Load two transceiver logs and run analysis."
         )
 
+        self.a_session: CiscoSshSession | None = None
+        self.b_session: CiscoSshSession | None = None
         self.endpoint_a: EndpointReading | None = None
         self.endpoint_b: EndpointReading | None = None
         self.directions: tuple[DirectionReading, DirectionReading] | None = None
@@ -87,7 +98,7 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         ).pack(side="left", padx=(8, 0), pady=(6, 0))
         ttk.Label(
             header,
-            text="Manual log import; no device connections or credential storage.",
+            text="Manual import or operator-gated read-only SSH; no credential storage.",
             foreground="#5c6b73",
         ).pack(side="right", pady=(6, 0))
 
@@ -130,6 +141,51 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             ),
             foreground="#5c6b73",
         ).grid(row=5, column=0, columnspan=7, sticky="w", pady=(8, 0))
+
+        ssh_frame = ttk.LabelFrame(
+            top,
+            text="Live SSH Collection (Optional, Read-Only)",
+            padding=10,
+            style="Tool.TLabelframe" if TTKBOOTSTRAP_AVAILABLE else "",
+        )
+        ssh_frame.grid(row=2, column=0, sticky="we", pady=(10, 0))
+        ssh_frame.columnconfigure(1, weight=1)
+        ssh_frame.columnconfigure(3, weight=1)
+        ttk.Label(ssh_frame, text="Username").grid(row=0, column=0, sticky="w")
+        ttk.Entry(ssh_frame, textvariable=self.ssh_username, width=28).grid(
+            row=0, column=1, sticky="w", padx=(8, 18)
+        )
+        ttk.Label(ssh_frame, text="SSH port").grid(row=0, column=2, sticky="w")
+        ttk.Entry(ssh_frame, textvariable=self.ssh_port, width=7).grid(
+            row=0, column=3, sticky="w", padx=(8, 18)
+        )
+        ttk.Label(ssh_frame, text="Device type").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        ttk.Entry(ssh_frame, textvariable=self.ssh_device_type, width=16).grid(
+            row=1, column=1, sticky="w", padx=(8, 18), pady=(8, 0)
+        )
+        self._button(
+            ssh_frame, "Connect A", lambda: self.connect_live_endpoint("A"), "primary"
+        ).grid(row=0, column=4, padx=4)
+        self._button(
+            ssh_frame, "Discover B via CDP", self.discover_b_from_a, "primary-outline"
+        ).grid(row=0, column=5, padx=4)
+        self._button(
+            ssh_frame, "Collect A Optics", lambda: self.collect_live_endpoint("A"), "success"
+        ).grid(row=0, column=6, padx=4)
+        self._button(
+            ssh_frame, "Connect B", lambda: self.connect_live_endpoint("B"), "primary"
+        ).grid(row=1, column=4, padx=4, pady=(8, 0))
+        self._button(
+            ssh_frame, "Collect B Optics", lambda: self.collect_live_endpoint("B"), "success"
+        ).grid(row=1, column=5, padx=4, pady=(8, 0))
+        self._button(
+            ssh_frame, "Build Live Report", self.build_live_report, "success-outline"
+        ).grid(row=1, column=6, padx=4, pady=(8, 0))
+        ttk.Label(
+            ssh_frame,
+            textvariable=self.ssh_status,
+            foreground="#5c6b73",
+        ).grid(row=2, column=0, columnspan=7, sticky="w", pady=(8, 0))
         top.columnconfigure(0, weight=1)
 
         buttons = ttk.Frame(self, padding=(14, 0, 14, 10))
@@ -198,6 +254,12 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             borderwidth=1,
         )
         self.detail_text.pack(fill="both", expand=True)
+
+    def destroy(self) -> None:
+        for session in (self.a_session, self.b_session):
+            if session is not None:
+                session.disconnect()
+        super().destroy()
 
     def _endpoint_inputs(
         self,
@@ -348,6 +410,194 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             messagebox.showerror("Analysis Error", str(exc), parent=self)
         except Exception as exc:
             messagebox.showerror("Unexpected Error", str(exc), parent=self)
+
+    def connect_live_endpoint(self, label: str) -> None:
+        if not netmiko_available():
+            messagebox.showerror(
+                "Netmiko Required",
+                "Live SSH collection requires Netmiko.\n\n"
+                "Install it with: python -m pip install netmiko",
+                parent=self,
+            )
+            return
+        username = self.ssh_username.get().strip()
+        if not username:
+            messagebox.showwarning(
+                "Missing Username", "Enter an SSH username first.", parent=self
+            )
+            return
+        host_var = self.a_device if label == "A" else self.b_device
+        host = host_var.get().strip()
+        if not host:
+            messagebox.showwarning(
+                "Missing Device",
+                f"Enter Endpoint {label} device name or address first.",
+                parent=self,
+            )
+            return
+        try:
+            port = int(self.ssh_port.get().strip())
+            if port < 1 or port > 65535:
+                raise ValueError
+        except ValueError:
+            messagebox.showwarning(
+                "Invalid SSH Port",
+                "Enter a TCP port number from 1 through 65535.",
+                parent=self,
+            )
+            return
+        password = simpledialog.askstring(
+            "SSH Login",
+            (
+                f"Enter SSH password for {username}@{host}:{port}.\n\n"
+                "The password is used only for this login and is not saved."
+            ),
+            parent=self,
+            show="*",
+        )
+        if password is None:
+            return
+        session = CiscoSshSession(
+            host=host,
+            username=username,
+            port=port,
+            device_type=self.ssh_device_type.get().strip() or "cisco_ios",
+        )
+        try:
+            session.connect(password)
+        except SshCollectorError as exc:
+            messagebox.showerror("SSH Login Failed", str(exc), parent=self)
+            return
+        if label == "A":
+            self.a_session = session
+        else:
+            self.b_session = session
+        self.ssh_status.set(
+            f"Connected to Endpoint {label}. Click the next collection step when ready."
+        )
+
+    def discover_b_from_a(self) -> None:
+        if self.a_session is None:
+            messagebox.showwarning(
+                "Endpoint A Not Connected",
+                "Connect to Endpoint A before running CDP discovery.",
+                parent=self,
+            )
+            return
+        if not self.a_interface.get().strip():
+            messagebox.showwarning(
+                "Missing Interface",
+                "Enter Endpoint A interface before running CDP discovery.",
+                parent=self,
+            )
+            return
+        try:
+            output = self.a_session.command("show cdp neighbors detail")
+            neighbor = find_cdp_link(
+                output, self.a_interface.get(), self.b_device.get()
+            )
+        except (SshCollectorError, ValueError) as exc:
+            messagebox.showerror("CDP Discovery Failed", str(exc), parent=self)
+            return
+
+        use_neighbor = messagebox.askyesno(
+            "Confirm CDP Discovery",
+            (
+                "CDP found this read-only link relationship:\n\n"
+                f"A local interface: {neighbor.local_interface}\n"
+                f"B device: {neighbor.device_id}\n"
+                f"B interface: {neighbor.remote_interface}\n\n"
+                "Use these values for Endpoint B?"
+            ),
+            parent=self,
+        )
+        if not use_neighbor:
+            return
+        self.a_interface.set(neighbor.local_interface)
+        self.b_device.set(neighbor.device_id)
+        self.b_interface.set(neighbor.remote_interface)
+        self.ssh_status.set(
+            "CDP discovery applied. Connect to Endpoint B when ready."
+        )
+
+    def collect_live_endpoint(self, label: str) -> None:
+        session = self.a_session if label == "A" else self.b_session
+        if session is None:
+            messagebox.showwarning(
+                "Not Connected",
+                f"Connect to Endpoint {label} before collecting optics.",
+                parent=self,
+            )
+            return
+        device_var = self.a_device if label == "A" else self.b_device
+        interface_var = self.a_interface if label == "A" else self.b_interface
+        endpoint_label = f"Endpoint {label}"
+        interface = normalize_interface(interface_var.get())
+        if not interface:
+            messagebox.showwarning(
+                "Missing Interface",
+                f"Enter {endpoint_label} interface before collecting optics.",
+                parent=self,
+            )
+            return
+        command = f"show interfaces {interface} transceiver detail"
+        confirmed = messagebox.askyesno(
+            "Confirm Read-Only Command",
+            (
+                f"Run this command on {device_var.get().strip()}?\n\n"
+                f"{command}\n\n"
+                "This tool does not enter configuration mode."
+            ),
+            parent=self,
+        )
+        if not confirmed:
+            return
+        try:
+            output = session.command(command)
+            endpoint = load_endpoint_text(
+                endpoint_label,
+                device_var.get(),
+                interface,
+                output,
+                datetime.now().astimezone(),
+                f"SSH: {command}",
+            )
+        except (SshCollectorError, ValueError, ParseError) as exc:
+            messagebox.showerror("Live Collection Failed", str(exc), parent=self)
+            return
+        if label == "A":
+            self.endpoint_a = endpoint
+            self.a_timestamp.set(endpoint.collected_at.isoformat(timespec="seconds"))
+        else:
+            self.endpoint_b = endpoint
+            self.b_timestamp.set(endpoint.collected_at.isoformat(timespec="seconds"))
+        self.ssh_status.set(
+            f"{endpoint_label} optics collected. Build the live report after both sides are collected."
+        )
+        if self.endpoint_a and self.endpoint_b:
+            self.build_live_report()
+
+    def build_live_report(self) -> None:
+        if not self.endpoint_a or not self.endpoint_b:
+            messagebox.showwarning(
+                "Live Data Incomplete",
+                "Collect optics from both Endpoint A and Endpoint B first.",
+                parent=self,
+            )
+            return
+        self.directions = (
+            build_direction("A to B", self.endpoint_a, self.endpoint_b),
+            build_direction("B to A", self.endpoint_b, self.endpoint_a),
+        )
+        self.populate()
+        self.ssh_status.set(
+            "Live report built. Review the table, then use Export HTML to save it."
+        )
+        messagebox.showinfo(
+            "Live Report Ready",
+            "The live SSH report is ready. Use Export HTML to save it.",
+            parent=self,
+        )
 
     def populate(self) -> None:
         self.tree.delete(*self.tree.get_children())
@@ -505,6 +755,11 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             messagebox.showerror("Open Report Error", str(exc), parent=self)
 
     def clear(self) -> None:
+        for session in (self.a_session, self.b_session):
+            if session is not None:
+                session.disconnect()
+        self.a_session = None
+        self.b_session = None
         self.endpoint_a = None
         self.endpoint_b = None
         self.directions = None
