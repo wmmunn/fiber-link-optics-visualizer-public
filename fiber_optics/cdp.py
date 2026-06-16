@@ -13,12 +13,21 @@ class CdpNeighbor:
     remote_interface: str
 
 
+def _normalize_device_id(value: str) -> str:
+    cleaned = value.strip()
+    if "(" in cleaned:
+        cleaned = cleaned.split("(", 1)[0].rstrip()
+    if "." in cleaned:
+        cleaned = cleaned.split(".", 1)[0].rstrip()
+    return cleaned
+
+
 def _device_matches(candidate: str, expected: str) -> bool:
     if not expected.strip():
         return True
-    left = candidate.strip().lower().split(".", 1)[0]
-    right = expected.strip().lower().split(".", 1)[0]
-    return left == right or right in candidate.strip().lower()
+    left = _normalize_device_id(candidate).lower()
+    right = _normalize_device_id(expected).lower()
+    return left == right or right in left
 
 
 def parse_cdp_neighbors_detail(text: str) -> tuple[CdpNeighbor, ...]:
@@ -32,7 +41,7 @@ def parse_cdp_neighbors_detail(text: str) -> tuple[CdpNeighbor, ...]:
         if device_id and local_interface and remote_interface:
             neighbors.append(
                 CdpNeighbor(
-                    device_id=device_id.strip(),
+                    device_id=_normalize_device_id(device_id),
                     local_interface=normalize_interface(local_interface),
                     remote_interface=normalize_interface(remote_interface),
                 )

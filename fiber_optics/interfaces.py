@@ -4,6 +4,7 @@ import re
 
 
 _PREFIXES = {
+    "ethernet": "Eth",
     "gigabitethernet": "Gi",
     "tengigabitethernet": "Te",
     "twentyfivegige": "Twe",
@@ -20,6 +21,8 @@ def normalize_interface(value: str) -> str:
         if lower.startswith(long_name):
             return short_name + compact[len(long_name) :]
     aliases = (
+        ("ether", "Eth"),
+        ("eth", "Eth"),
         ("twentyfivegig", "Twe"),
         ("fortygig", "Fo"),
         ("fiftygig", "Fi"),
@@ -31,7 +34,7 @@ def normalize_interface(value: str) -> str:
         if lower.startswith(prefix):
             suffix = compact[len(prefix) :]
             return short_name + suffix
-    match = re.match(r"(?i)^(gi|te|twe|fo|fi|hu)(.+)$", compact)
+    match = re.match(r"(?i)^(eth|gi|te|twe|fo|fi|hu)(.+)$", compact)
     if match:
         return match.group(1).title() + match.group(2)
     return compact

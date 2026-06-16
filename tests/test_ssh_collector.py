@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from fiber_optics.ssh_collector import (
     SshCollectorError,
+    build_transceiver_command,
     check_tcp_reachable,
     validate_device_type,
 )
@@ -25,6 +26,18 @@ class SshCollectorTests(unittest.TestCase):
 
     def test_accepts_supported_device_type(self) -> None:
         self.assertEqual(validate_device_type("cisco_ios"), "cisco_ios")
+
+    def test_builds_catalyst_transceiver_command(self) -> None:
+        self.assertEqual(
+            build_transceiver_command("cisco_ios", "Te1/1/1"),
+            "show interfaces Te1/1/1 transceiver detail",
+        )
+
+    def test_builds_nexus_transceiver_command(self) -> None:
+        self.assertEqual(
+            build_transceiver_command("cisco_nxos", "Eth3/31"),
+            "show int Eth3/31 transceiver details",
+        )
 
 
 if __name__ == "__main__":

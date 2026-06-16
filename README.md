@@ -2,7 +2,7 @@
 
 A practical, operator-focused visualization of Cisco transceiver detail from both ends of a fiber link.
 
-Fiber Link Optics Visualizer turns Cisco Catalyst transceiver output from both
+Fiber Link Optics Visualizer turns Cisco transceiver output from both
 ends of a link into a self-contained HTML report. The default workflow imports
 saved CLI output, and an optional read-only SSH workflow can collect the same
 data from approved lab or operational environments.
@@ -17,20 +17,22 @@ collection timestamps.
 The image uses synthetic readings. A complete browsable example is available
 at [examples/dummy-report.html](examples/dummy-report.html).
 
-## Version 0.3.4
+## Version 0.3.5
 
-This revision updates the public package to match the current working tool
-while keeping it sanitized and source-only.
+This revision promotes the tested Nexus/CDP compatibility work into the
+sanitized public package while keeping the repository source-only.
 
-- Added optional read-only SSH collection with separate Endpoint A and
-  Endpoint B logins.
-- Added CDP-assisted B-side interface discovery with operator confirmation.
-- Added live-report labeling so SSH-collected reports are clearly distinguished
-  from manual imports.
-- Hardened file handling with size checks and strict UTF-8 decoding.
-- Added Netmiko device-type validation and an optional strict host-key toggle.
-- Improved report opening behavior across Windows, macOS, and Linux.
-- Refined the GUI layout for better behavior under Windows display scaling.
+- Added Nexus-style `SFP Detail Diagnostics Information` parsing for row-based
+  DOM tables.
+- Added a supported-platform dropdown for live SSH collection and limited it
+  to validated choices only.
+- Routed Nexus live collection to `show int <interface> transceiver details`.
+- Trimmed CDP-discovered B-side hostnames so domain suffixes or parenthetical
+  trailer text do not interfere with SSH connection attempts.
+- Normalized `Ethernet` and `Eth` interface names consistently across CDP,
+  operator input, and parsed logs.
+- Preserved the sanitized public scope with synthetic fixtures only and no
+  binary artifacts committed to the repository.
 
 See [HISTORY.md](HISTORY.md) for the revision log.
 
@@ -49,16 +51,17 @@ does not impose a universal acceptable-loss threshold.
 
 ## Supported Input
 
-The parser targets threshold-backed Cisco IOS and IOS-XE output from commands
-such as:
+The parser targets threshold-backed Cisco IOS, IOS-XE, and Nexus-style output
+from commands such as:
 
 ```text
 show interfaces <interface> transceiver detail
+show int <interface> transceiver details
 show interfaces transceiver detail
 ```
 
-It supports common compact threshold tables and normalizes common Cisco
-interface names, including `Gi`, `Te`, and `Twe`.
+It supports common compact threshold tables, Nexus row-based SFP diagnostics,
+and common Cisco interface names including `Gi`, `Te`, `Twe`, and `Eth`.
 
 Optional CDP-assisted discovery uses:
 
@@ -110,7 +113,9 @@ replacement for approval, change-control, or local security policy.
 The workflow is deliberately step-by-step:
 
 1. Enter Endpoint A device, Endpoint A interface, expected Endpoint B device,
-   SSH username, and SSH port.
+   SSH username, SSH port, and the matching `Device type` from the GUI
+   dropdown. Supported live choices are `cisco_ios`, `cisco_xe`, and
+   `cisco_nxos`.
 2. Select **Connect A** and complete the interactive login flow.
 3. Select **Discover B via CDP** to run `show cdp neighbors detail`.
 4. Review and confirm the discovered B-side device and interface.
@@ -124,7 +129,12 @@ The live collector uses only:
 ```text
 show cdp neighbors detail
 show interfaces <interface> transceiver detail
+show int <interface> transceiver details
 ```
+
+When CDP discovery finds a B-side device name, the tool applies a sanitized
+host value to the connect field by keeping the base hostname and dropping any
+domain suffix or parenthetical trailer text.
 
 MFA and interactive SSH behavior varies by environment. Some SSH gateways
 present MFA prompts through the SSH session, while others require VPN, jump

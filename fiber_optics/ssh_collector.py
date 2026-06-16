@@ -8,7 +8,7 @@ class SshCollectorError(RuntimeError):
     """Raised when live SSH collection cannot proceed."""
 
 
-ALLOWED_DEVICE_TYPES = {"cisco_ios", "cisco_xe", "cisco_nxos", "cisco_xr"}
+ALLOWED_DEVICE_TYPES = {"cisco_ios", "cisco_xe", "cisco_nxos"}
 
 
 def netmiko_available() -> bool:
@@ -39,6 +39,13 @@ def validate_device_type(device_type: str) -> str:
             f"Unsupported Netmiko device type {cleaned!r}. Supported values: {supported}."
         )
     return cleaned
+
+
+def build_transceiver_command(device_type: str, interface: str) -> str:
+    normalized_device_type = validate_device_type(device_type)
+    if normalized_device_type == "cisco_nxos":
+        return f"show int {interface} transceiver details"
+    return f"show interfaces {interface} transceiver detail"
 
 
 @dataclass

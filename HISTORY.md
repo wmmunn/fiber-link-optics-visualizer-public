@@ -1,5 +1,21 @@
 # Fiber Link Optics Visualizer History
 
+## 0.3.5 - 2026-06-16
+
+- Added Nexus-style `SFP Detail Diagnostics Information` parsing so row-based
+  DOM output can be analyzed alongside Catalyst-style transceiver detail.
+- Added a supported-platform dropdown for live SSH collection and limited it to
+  the validated choices `cisco_ios`, `cisco_xe`, and `cisco_nxos`.
+- Routed Nexus live collection to `show int <interface> transceiver details`
+  while preserving the Catalyst-style command path for IOS and IOS-XE.
+- Sanitized CDP-discovered B-side device names before applying them to the host
+  field by trimming domain suffixes and parenthetical trailer text that can
+  interfere with SSH connection attempts.
+- Normalized `Ethernet` and `Eth` interface names consistently so Nexus-style
+  interfaces line up across CDP output, operator input, and parsed logs.
+- Kept the public package sanitized and source-only, with synthetic fixtures and
+  no environment-specific identifiers or binary release artifacts committed.
+
 ## 0.3.4 - 2026-06-16
 
 - Synced the public package to the latest sanitized working build.

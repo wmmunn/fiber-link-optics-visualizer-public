@@ -22,12 +22,20 @@ from .cdp import find_cdp_link
 from .models import DirectionReading, EndpointReading, MetricReading
 from .interfaces import normalize_interface
 from .parser import ParseError, discover_interfaces
-from .ssh_collector import CiscoSshSession, SshCollectorError, validate_device_type, netmiko_available
+from .ssh_collector import (
+    CiscoSshSession,
+    SshCollectorError,
+    build_transceiver_command,
+    netmiko_available,
+    validate_device_type,
+)
 from .workflow import analyze_logs, load_endpoint_text, read_log_text, write_report
 
 
 APP_NAME = "Fiber Link Optics Visualizer"
-APP_VERSION = "0.3.4"
+APP_VERSION = "0.3.5"
+APP_AUTHOR = "Created by William Munn"
+SSH_DEVICE_TYPES = ("cisco_ios", "cisco_xe", "cisco_nxos")
 
 
 class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
@@ -172,10 +180,16 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         self._button(
             ssh_frame, "Collect A Optics", lambda: self.collect_live_endpoint("A"), "success"
         ).grid(row=0, column=6, padx=4)
-        ttk.Label(ssh_frame, text="Device type").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Entry(ssh_frame, textvariable=self.ssh_device_type, width=16).grid(
-            row=1, column=1, sticky="w", padx=(8, 18), pady=(8, 0)
+        ttk.Label(ssh_frame, text="Device type").grid(
+            row=1, column=0, sticky="w", pady=(8, 0)
         )
+        ttk.Combobox(
+            ssh_frame,
+            textvariable=self.ssh_device_type,
+            values=SSH_DEVICE_TYPES,
+            state="readonly",
+            width=14,
+        ).grid(row=1, column=1, sticky="w", padx=(8, 18), pady=(8, 0))
         ttk.Checkbutton(
             ssh_frame,
             text="Strict host key verification",
@@ -217,6 +231,12 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         self._button(buttons, "Exit", self.destroy, "secondary-outline").pack(
             side="right"
         )
+        ttk.Label(
+            buttons,
+            text=APP_AUTHOR,
+            foreground="#5c6b73",
+            font=("Segoe UI", 9),
+        ).pack(side="right", padx=(0, 14), pady=(6, 0))
 
         self.summary = ttk.Label(
             self,
@@ -558,7 +578,7 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
                 parent=self,
             )
             return
-        command = f"show interfaces {interface} transceiver detail"
+        command = build_transceiver_command(session.device_type, interface)
         confirmed = messagebox.askyesno(
             "Confirm Read-Only Command",
             (

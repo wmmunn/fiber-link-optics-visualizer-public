@@ -153,10 +153,56 @@ def _parse_verbose_rows(text: str, target: str) -> dict[str, MetricReading]:
     return readings
 
 
+def _parse_nexus_diagnostics(text: str) -> dict[str, MetricReading]:
+    readings: dict[str, MetricReading] = {}
+    in_diagnostics_block = False
+
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if "SFP Detail Diagnostics Information" in stripped:
+            in_diagnostics_block = True
+            continue
+        if not in_diagnostics_block:
+            continue
+        if stripped.startswith("Transmit Fault Count"):
+            break
+        if (
+            stripped.startswith("----")
+            or stripped == "Current              Alarms                  Warnings"
+            or stripped == "Measurement     High        Low         High          Low"
+        ):
+            continue
+
+        metric = _metric_from_text(stripped)
+        if metric not in METRIC_UNITS:
+            continue
+
+        numeric = _numbers(stripped)
+        if len(numeric) < 5:
+            continue
+
+        value, high_alarm, low_alarm, high_warn, low_warn = numeric[:5]
+        readings[metric] = MetricReading(
+            metric=metric,
+            unit=METRIC_UNITS[metric],
+            value=value,
+            low_alarm=low_alarm,
+            low_warn=low_warn,
+            high_warn=high_warn,
+            high_alarm=high_alarm,
+        )
+
+    return readings
+
+
 def parse_cisco_transceiver(text: str, interface: str) -> tuple[MetricReading, ...]:
     target = normalize_interface(interface)
     readings = _parse_compact_rows(text, target)
     readings.update(_parse_verbose_rows(text, target))
+    readings.update(_parse_nexus_diagnostics(text))
     ordered = tuple(readings[name] for name in METRIC_ORDER if name in readings)
     if not ordered:
         detected = discover_interfaces(text)
