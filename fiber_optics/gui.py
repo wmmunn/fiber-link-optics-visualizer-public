@@ -3,8 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 import os
 from pathlib import Path
+import platform
+import subprocess
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
+import webbrowser
 
 try:
     import ttkbootstrap as tb
@@ -19,12 +22,12 @@ from .cdp import find_cdp_link
 from .models import DirectionReading, EndpointReading, MetricReading
 from .interfaces import normalize_interface
 from .parser import ParseError, discover_interfaces
-from .ssh_collector import CiscoSshSession, SshCollectorError, netmiko_available
-from .workflow import analyze_logs, load_endpoint_text, write_report
+from .ssh_collector import CiscoSshSession, SshCollectorError, validate_device_type, netmiko_available
+from .workflow import analyze_logs, load_endpoint_text, read_log_text, write_report
 
 
 APP_NAME = "Fiber Link Optics Visualizer"
-APP_VERSION = "0.3.2"
+APP_VERSION = "0.3.4"
 
 
 class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
@@ -49,8 +52,9 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         self.ssh_username = tk.StringVar()
         self.ssh_port = tk.StringVar(value="22")
         self.ssh_device_type = tk.StringVar(value="cisco_ios")
+        self.strict_host_key = tk.BooleanVar(value=False)
         self.ssh_status = tk.StringVar(
-            value="Live SSH is optional. Manual log import remains available."
+            value="Live SSH is optional. Manual log import remains available. Strict host key verification is off unless you enable it."
         )
         self.summary_text = tk.StringVar(
             value="Load two transceiver logs and run analysis."
@@ -101,7 +105,6 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             text="Manual import or operator-gated read-only SSH; no credential storage.",
             foreground="#5c6b73",
         ).pack(side="right", pady=(6, 0))
-
         input_frame = ttk.LabelFrame(
             top,
             text="Inputs",
@@ -150,7 +153,8 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         )
         ssh_frame.grid(row=2, column=0, sticky="we", pady=(10, 0))
         ssh_frame.columnconfigure(1, weight=1)
-        ssh_frame.columnconfigure(3, weight=1)
+        ssh_frame.columnconfigure(4, weight=1)
+        ssh_frame.columnconfigure(7, weight=1)
         ttk.Label(ssh_frame, text="Username").grid(row=0, column=0, sticky="w")
         ttk.Entry(ssh_frame, textvariable=self.ssh_username, width=28).grid(
             row=0, column=1, sticky="w", padx=(8, 18)
@@ -158,10 +162,6 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         ttk.Label(ssh_frame, text="SSH port").grid(row=0, column=2, sticky="w")
         ttk.Entry(ssh_frame, textvariable=self.ssh_port, width=7).grid(
             row=0, column=3, sticky="w", padx=(8, 18)
-        )
-        ttk.Label(ssh_frame, text="Device type").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Entry(ssh_frame, textvariable=self.ssh_device_type, width=16).grid(
-            row=1, column=1, sticky="w", padx=(8, 18), pady=(8, 0)
         )
         self._button(
             ssh_frame, "Connect A", lambda: self.connect_live_endpoint("A"), "primary"
@@ -172,6 +172,15 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         self._button(
             ssh_frame, "Collect A Optics", lambda: self.collect_live_endpoint("A"), "success"
         ).grid(row=0, column=6, padx=4)
+        ttk.Label(ssh_frame, text="Device type").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        ttk.Entry(ssh_frame, textvariable=self.ssh_device_type, width=16).grid(
+            row=1, column=1, sticky="w", padx=(8, 18), pady=(8, 0)
+        )
+        ttk.Checkbutton(
+            ssh_frame,
+            text="Strict host key verification",
+            variable=self.strict_host_key,
+        ).grid(row=1, column=2, columnspan=2, sticky="w", pady=(8, 0), padx=(0, 18))
         self._button(
             ssh_frame, "Connect B", lambda: self.connect_live_endpoint("B"), "primary"
         ).grid(row=1, column=4, padx=4, pady=(8, 0))
@@ -185,6 +194,7 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             ssh_frame,
             textvariable=self.ssh_status,
             foreground="#5c6b73",
+            wraplength=1120,
         ).grid(row=2, column=0, columnspan=7, sticky="w", pady=(8, 0))
         top.columnconfigure(0, weight=1)
 
@@ -314,7 +324,10 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             if not device.get().strip():
                 device.set(Path(selected).stem)
             interface_var = self.a_interface if target is self.a_log else self.b_interface
-            self._apply_discovered_interface(Path(selected), interface_var, notify=False)
+            try:
+                self._apply_discovered_interface(Path(selected), interface_var, notify=False)
+            except ValueError as exc:
+                messagebox.showwarning("Log File Warning", str(exc), parent=self)
 
     def _apply_discovered_interface(
         self,
@@ -325,7 +338,7 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
     ) -> bool:
         if not log_path.is_file():
             return False
-        text = log_path.read_text(encoding="utf-8-sig", errors="replace")
+        text = read_log_text(log_path, "Selected")
         detected = discover_interfaces(text)
         if len(detected) != 1:
             return False
@@ -356,7 +369,7 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         for log_path, interface_var in pairs:
             if not log_path.is_file():
                 continue
-            text = log_path.read_text(encoding="utf-8-sig", errors="replace")
+            text = read_log_text(log_path, "Selected")
             detected = discover_interfaces(text)
             configured = normalize_interface(interface_var.get())
             if detected and configured.lower() not in {
@@ -439,12 +452,16 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             port = int(self.ssh_port.get().strip())
             if port < 1 or port > 65535:
                 raise ValueError
+            device_type = validate_device_type(self.ssh_device_type.get())
         except ValueError:
             messagebox.showwarning(
                 "Invalid SSH Port",
                 "Enter a TCP port number from 1 through 65535.",
                 parent=self,
             )
+            return
+        except SshCollectorError as exc:
+            messagebox.showwarning("Invalid Device Type", str(exc), parent=self)
             return
         password = simpledialog.askstring(
             "SSH Login",
@@ -461,7 +478,8 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             host=host,
             username=username,
             port=port,
-            device_type=self.ssh_device_type.get().strip() or "cisco_ios",
+            device_type=device_type,
+            strict_host_key=self.strict_host_key.get(),
         )
         try:
             session.connect(password)
@@ -750,8 +768,14 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             )
             return
         try:
-            os.startfile(self.last_report)
-        except OSError as exc:
+            system = platform.system()
+            if system == "Windows":
+                os.startfile(self.last_report)
+            elif system == "Darwin":
+                subprocess.run(["open", str(self.last_report)], check=False)
+            else:
+                webbrowser.open(self.last_report.resolve().as_uri())
+        except (AttributeError, OSError, ValueError) as exc:
             messagebox.showerror("Open Report Error", str(exc), parent=self)
 
     def clear(self) -> None:

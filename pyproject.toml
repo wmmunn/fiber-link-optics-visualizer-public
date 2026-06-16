@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fiber-link-optics-visualizer"
-version = "0.3.2"
+version = "0.3.4"
 description = "Visualize bidirectional Cisco Catalyst transceiver readings from saved CLI output or optional read-only SSH collection."
 readme = "README.md"
 requires-python = ">=3.10"

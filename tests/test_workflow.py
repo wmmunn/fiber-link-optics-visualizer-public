@@ -2,7 +2,13 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from fiber_optics.workflow import analyze_logs, load_endpoint_text, write_report
+from fiber_optics.workflow import (
+    MAX_LOG_BYTES,
+    analyze_logs,
+    load_endpoint_text,
+    read_log_text,
+    write_report,
+)
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -46,6 +52,22 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(endpoint.timestamp_source, "live SSH collection")
         self.assertEqual(endpoint.source_file, "SSH: show interfaces Te1/1/1 transceiver detail")
         self.assertEqual(len(endpoint.metrics), 5)
+
+    def test_rejects_oversized_log_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "too-large.log"
+            path.write_bytes(b"x" * (MAX_LOG_BYTES + 1))
+
+            with self.assertRaises(ValueError):
+                read_log_text(path, "Endpoint A")
+
+    def test_rejects_invalid_utf8_log_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "invalid.log"
+            path.write_bytes(b"\xff\xfe\xfa")
+
+            with self.assertRaises(ValueError):
+                read_log_text(path, "Endpoint A")
 
 
 def endpoint_a_collected_at():

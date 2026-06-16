@@ -8,10 +8,13 @@ class SshCollectorError(RuntimeError):
     """Raised when live SSH collection cannot proceed."""
 
 
+ALLOWED_DEVICE_TYPES = {"cisco_ios", "cisco_xe", "cisco_nxos", "cisco_xr"}
+
+
 def netmiko_available() -> bool:
     try:
         import netmiko  # noqa: F401
-    except Exception:
+    except ImportError:
         return False
     return True
 
@@ -28,15 +31,27 @@ def check_tcp_reachable(host: str, port: int, timeout: int = 8) -> None:
         ) from exc
 
 
+def validate_device_type(device_type: str) -> str:
+    cleaned = device_type.strip() or "cisco_ios"
+    if cleaned not in ALLOWED_DEVICE_TYPES:
+        supported = ", ".join(sorted(ALLOWED_DEVICE_TYPES))
+        raise SshCollectorError(
+            f"Unsupported Netmiko device type {cleaned!r}. Supported values: {supported}."
+        )
+    return cleaned
+
+
 @dataclass
 class CiscoSshSession:
     host: str
     username: str
     port: int = 22
     device_type: str = "cisco_ios"
+    strict_host_key: bool = False
     timeout: int = 45
 
     def __post_init__(self) -> None:
+        self.device_type = validate_device_type(self.device_type)
         self._connection = None
 
     @property
@@ -62,6 +77,8 @@ class CiscoSshSession:
                 auth_timeout=self.timeout,
                 banner_timeout=self.timeout,
                 conn_timeout=self.timeout,
+                ssh_strict=self.strict_host_key,
+                system_host_keys=self.strict_host_key,
             )
         except Exception as exc:
             raise SshCollectorError(f"SSH login failed for {self.host}: {exc}") from exc

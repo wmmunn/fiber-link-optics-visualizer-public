@@ -1,7 +1,11 @@
 import unittest
 from unittest.mock import patch
 
-from fiber_optics.ssh_collector import SshCollectorError, check_tcp_reachable
+from fiber_optics.ssh_collector import (
+    SshCollectorError,
+    check_tcp_reachable,
+    validate_device_type,
+)
 
 
 class SshCollectorTests(unittest.TestCase):
@@ -14,6 +18,13 @@ class SshCollectorTests(unittest.TestCase):
         self.assertIn("switch.example:22", message)
         self.assertIn("before authentication", message)
         self.assertIn("MFA or interactive SSH", message)
+
+    def test_rejects_unsupported_device_type(self) -> None:
+        with self.assertRaises(SshCollectorError):
+            validate_device_type("linux")
+
+    def test_accepts_supported_device_type(self) -> None:
+        self.assertEqual(validate_device_type("cisco_ios"), "cisco_ios")
 
 
 if __name__ == "__main__":

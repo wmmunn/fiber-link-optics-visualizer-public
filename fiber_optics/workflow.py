@@ -9,6 +9,8 @@ from .models import EndpointReading
 from .parser import parse_cisco_transceiver
 from .report import build_html_report
 
+MAX_LOG_BYTES = 10 * 1024 * 1024
+
 
 def parse_timestamp(value: str | None, source: Path) -> tuple[datetime, str]:
     if value and value.strip():
@@ -26,6 +28,22 @@ def parse_timestamp(value: str | None, source: Path) -> tuple[datetime, str]:
     return datetime.fromtimestamp(source.stat().st_mtime).astimezone(), "log file modified time"
 
 
+def read_log_text(log_path: Path, label: str) -> str:
+    if not log_path.is_file():
+        raise ValueError(f"{label} log file does not exist: {log_path}")
+    size = log_path.stat().st_size
+    if size > MAX_LOG_BYTES:
+        raise ValueError(
+            f"{label} log file is too large ({size // 1024} KB); max is {MAX_LOG_BYTES // 1024 // 1024} MB."
+        )
+    try:
+        return log_path.read_text(encoding="utf-8-sig", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            f"{label} log file is not valid UTF-8 text and could not be read safely: {log_path.name}"
+        ) from exc
+
+
 def load_endpoint(
     label: str,
     device: str,
@@ -37,11 +55,9 @@ def load_endpoint(
         raise ValueError(f"{label} device name is required.")
     if not interface.strip():
         raise ValueError(f"{label} interface is required.")
-    if not log_path.is_file():
-        raise ValueError(f"{label} log file does not exist: {log_path}")
 
     timestamp, timestamp_source = parse_timestamp(collected_at, log_path)
-    text = log_path.read_text(encoding="utf-8-sig", errors="replace")
+    text = read_log_text(log_path, label)
     metrics = parse_cisco_transceiver(text, interface)
     return EndpointReading(
         label=label,

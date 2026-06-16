@@ -17,6 +17,23 @@ collection timestamps.
 The image uses synthetic readings. A complete browsable example is available
 at [examples/dummy-report.html](examples/dummy-report.html).
 
+## Version 0.3.4
+
+This revision updates the public package to match the current working tool
+while keeping it sanitized and source-only.
+
+- Added optional read-only SSH collection with separate Endpoint A and
+  Endpoint B logins.
+- Added CDP-assisted B-side interface discovery with operator confirmation.
+- Added live-report labeling so SSH-collected reports are clearly distinguished
+  from manual imports.
+- Hardened file handling with size checks and strict UTF-8 decoding.
+- Added Netmiko device-type validation and an optional strict host-key toggle.
+- Improved report opening behavior across Windows, macOS, and Linux.
+- Refined the GUI layout for better behavior under Windows display scaling.
+
+See [HISTORY.md](HISTORY.md) for the revision log.
+
 ## Safety and Scope
 
 - Manual log import remains the default workflow
@@ -161,6 +178,10 @@ pyinstaller --noconfirm --clean fiber_link_optics_visualizer.spec
 The windowed executable is written to
 `dist\FiberLinkOpticsVisualizer.exe`. Executables and build artifacts are not
 committed.
+
+The public repository intentionally distributes source code, sanitized sample
+data, and reproducible packaging metadata. Published binaries are left to the
+operator because local signing and trust requirements vary by environment.
 
 ## Privacy
 
