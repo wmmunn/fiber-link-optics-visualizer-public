@@ -1,4 +1,6 @@
-# Fiber Link Optics Visualizer
+﻿# Fiber Link Optics Visualizer
+
+[![tests](https://github.com/wmmunn/fiber-link-optics-visualizer-public/actions/workflows/tests.yml/badge.svg)](https://github.com/wmmunn/fiber-link-optics-visualizer-public/actions/workflows/tests.yml)
 
 A practical, operator-focused visualization of Cisco transceiver detail from both ends of a fiber link.
 
@@ -206,3 +208,4 @@ MIT. See [LICENSE](LICENSE).
 
 Cisco, Catalyst, IOS, and IOS-XE are trademarks of Cisco Systems, Inc. This
 project is independent and is not affiliated with or endorsed by Cisco.
+
