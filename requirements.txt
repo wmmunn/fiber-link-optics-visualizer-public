@@ -1,0 +1,4 @@
+# Optional runtime dependencies for GUI theming and live SSH collection.
+# The core parser/report workflow has no third-party runtime dependency.
+ttkbootstrap>=1.10,<2
+netmiko>=4.4,<5

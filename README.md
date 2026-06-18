@@ -96,6 +96,9 @@ Install Netmiko only when you want to use the optional SSH workflow:
 python -m pip install -e ".[ssh]"
 ```
 
+For dependency scanners that expect a classic Python manifest, `requirements.txt`
+lists the optional GUI/SSH runtime dependencies.
+
 In the GUI:
 
 1. Select one sanitized or locally collected transceiver log for each endpoint.
