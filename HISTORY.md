@@ -5,6 +5,8 @@
 - Added post-login `show version` platform autodetection for live SSH sessions
   so IOS, IOS-XE, and NX-OS devices can use the correct read-only transceiver
   command after connection.
+- Treat transceiver modules that explicitly do not support DOM/DDM readings as
+  limited data, allowing reports to be generated without false optic warnings.
 
 ## 0.3.5 - 2026-06-16
 

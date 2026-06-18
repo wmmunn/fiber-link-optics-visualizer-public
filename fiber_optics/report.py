@@ -24,6 +24,8 @@ def _overall_status(endpoints: tuple[EndpointReading, EndpointReading]) -> str:
         return "Alarm"
     if "warn" in levels:
         return "Warning"
+    if any(not endpoint.metrics for endpoint in endpoints):
+        return "Limited Data"
     return "Healthy"
 
 
@@ -100,6 +102,18 @@ def _endpoint_panel(endpoint: EndpointReading, css_class: str) -> str:
             f"<td>{_number(reading.high_warn)}</td>"
             f"<td>{_number(reading.high_alarm)}</td>"
             "</tr>"
+        )
+
+    if not endpoint.metrics:
+        graph_rows.append(
+            "<tr class='row-missing'>"
+            "<td class='metric'>DOM</td>"
+            "<td class='value'>n/a</td>"
+            "<td class='range-cell'>This module does not provide threshold-backed DOM readings.</td>"
+            "</tr>"
+        )
+        detail_rows.append(
+            "<tr><td>DOM readings</td><td colspan='5'>Unavailable or unsupported by this transceiver module.</td></tr>"
         )
 
     return f"""
@@ -189,7 +203,7 @@ header{{display:flex;justify-content:space-between;gap:24px;align-items:flex-end
 .mode{{padding:7px 11px;border:1px solid #8eb8cb;border-radius:999px;background:var(--blue-soft);color:#164e69;font-size:12px;font-weight:700;white-space:nowrap}}
 .summary{{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:10px;margin-bottom:14px}} .summary-card{{padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}}
 .summary-label{{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}} .summary-value{{margin-top:4px;font-size:16px;font-weight:700}}
-.Healthy{{color:#246635}} .Warning{{color:#805c00}} .Alarm{{color:#8b211b}}
+.Healthy{{color:#246635}} .Warning{{color:#805c00}} .Alarm{{color:#8b211b}} .Limited.Data{{color:#4f5b57}}
 .collection-banner{{display:flex;justify-content:center;gap:9px;align-items:baseline;margin-bottom:14px;padding:11px 14px;border:1px solid #8eb8cb;border-radius:8px;background:var(--blue-soft);color:#164e69}}
 .collection-banner span{{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}} .collection-banner strong{{font-size:17px}} .collection-banner small{{color:var(--muted)}}
 .link-layout{{display:grid;grid-template-columns:minmax(390px,1fr) minmax(245px,.62fr) minmax(390px,1fr);gap:14px;align-items:stretch}}
@@ -199,7 +213,7 @@ table{{width:100%;border-collapse:collapse}} th,td{{padding:10px 8px;border-bott
 tr:last-child td{{border-bottom:0}} .metric{{width:76px;font-weight:700}} .value{{width:72px;font-variant-numeric:tabular-nums;white-space:nowrap}} .range-cell{{min-width:190px}}
 .range{{position:relative;display:flex;height:18px;overflow:hidden;border:1px solid #89979d;border-radius:4px}} .zone{{height:100%}} .alarm{{background:var(--alarm)}} .warning{{background:var(--warn)}} .normal{{background:var(--ok)}}
 .marker{{position:absolute;top:-3px;width:3px;height:24px;background:#111;box-shadow:0 0 0 1px #fff}} .range-labels{{display:flex;justify-content:space-between;margin-top:3px;color:var(--muted);font-size:8px;font-variant-numeric:tabular-nums}}
-.row-ok td{{background:var(--ok-soft)}} .row-warn td{{background:#fff7d8}} .row-alarm td{{background:#ffe0dc}}
+.row-ok td{{background:var(--ok-soft)}} .row-warn td{{background:#fff7d8}} .row-alarm td{{background:#ffe0dc}} .row-missing td{{background:#f1f3f4}}
 .data-points{{margin:14px;overflow:hidden;border:1px solid var(--line);border-radius:7px}} .data-points-title{{padding:8px 10px;border-bottom:1px solid var(--line);background:#f3f6f7;color:#4a5b64;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}}
 .data-points th,.data-points td{{padding:6px 7px;font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}} .data-points th{{font-size:8px}} .data-points th:first-child,.data-points td:first-child{{text-align:left}} .data-points tbody tr:nth-child(even) td{{background:#f8fafb}}
 .directions{{display:flex;flex-direction:column;justify-content:center;gap:16px;padding:16px;border:1px solid var(--line);border-radius:10px;background:#f8fafb}} .directions-title{{text-align:center;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}}

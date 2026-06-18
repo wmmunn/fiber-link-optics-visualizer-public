@@ -2,7 +2,12 @@ from pathlib import Path
 import unittest
 
 from fiber_optics.interfaces import normalize_interface
-from fiber_optics.parser import ParseError, discover_interfaces, parse_cisco_transceiver
+from fiber_optics.parser import (
+    ParseError,
+    discover_interfaces,
+    dom_readings_unavailable,
+    parse_cisco_transceiver,
+)
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -69,6 +74,18 @@ Twe1/0/22   43.4        89.0        85.0       -5.0      -9.0
         self.assertEqual(by_metric["Current"].high_alarm, 65.09)
         self.assertEqual(by_metric["Tx Power"].low_alarm, -13.00)
         self.assertEqual(by_metric["Rx Power"].high_warn, -2.99)
+
+    def test_returns_empty_readings_when_dom_is_not_supported(self) -> None:
+        text = """
+Te1/1/1
+  Transceiver monitoring is not supported on this module.
+  Digital optical monitoring: not available
+"""
+
+        readings = parse_cisco_transceiver(text, "Te1/1/1")
+
+        self.assertEqual(readings, ())
+        self.assertTrue(dom_readings_unavailable(text))
 
 
 if __name__ == "__main__":

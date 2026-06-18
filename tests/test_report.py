@@ -74,6 +74,37 @@ class ReportTests(unittest.TestCase):
         self.assertIn("live SSH", report)
         self.assertNotIn("MANUAL LOG IMPORT", report)
 
+    def test_reports_unsupported_dom_as_limited_data(self) -> None:
+        endpoint_a = EndpointReading(
+            label="Endpoint A",
+            device="DEMO-SW-A",
+            interface="Te1/1/1",
+            collected_at=datetime(2026, 6, 13, 14, 32, tzinfo=timezone.utc),
+            timestamp_source="operator supplied",
+            source_file="unsupported-dom.log",
+            metrics=(),
+        )
+        text = (FIXTURES / "endpoint_b.log").read_text(encoding="utf-8")
+        endpoint_b = EndpointReading(
+            label="Endpoint B",
+            device="DEMO-SW-B",
+            interface="Te1/1/1",
+            collected_at=datetime(2026, 6, 13, 14, 32, tzinfo=timezone.utc),
+            timestamp_source="operator supplied",
+            source_file="endpoint_b.log",
+            metrics=parse_cisco_transceiver(text, "Te1/1/1"),
+        )
+        directions = (
+            build_direction("A to B", endpoint_a, endpoint_b),
+            build_direction("B to A", endpoint_b, endpoint_a),
+        )
+
+        report = build_html_report(endpoint_a, endpoint_b, directions)
+
+        self.assertIn("Limited Data", report)
+        self.assertIn("does not provide threshold-backed DOM readings", report)
+        self.assertIn("Unavailable", report)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -20,6 +20,19 @@ class ParseError(ValueError):
     """Raised when selected-interface transceiver data cannot be parsed."""
 
 
+UNSUPPORTED_DOM_RE = re.compile(
+    r"(?i)\b(?:dom|ddm|digital\s+optical\s+monitoring|diagnostic(?:s)?|"
+    r"transceiver\s+monitoring)\b.*\b(?:not\s+supported|unsupported|not\s+available|"
+    r"unavailable|not\s+applicable|n/?a)\b|"
+    r"\b(?:not\s+supported|unsupported|not\s+available|unavailable|not\s+applicable|n/?a)\b.*"
+    r"\b(?:dom|ddm|digital\s+optical\s+monitoring|diagnostic(?:s)?|transceiver\s+monitoring)\b"
+)
+
+
+def dom_readings_unavailable(text: str) -> bool:
+    return bool(UNSUPPORTED_DOM_RE.search(text or ""))
+
+
 def discover_interfaces(text: str) -> tuple[str, ...]:
     interfaces: set[str] = set()
     for raw_line in text.splitlines():
@@ -204,6 +217,8 @@ def parse_cisco_transceiver(text: str, interface: str) -> tuple[MetricReading, .
     readings.update(_parse_verbose_rows(text, target))
     readings.update(_parse_nexus_diagnostics(text))
     ordered = tuple(readings[name] for name in METRIC_ORDER if name in readings)
+    if not ordered and dom_readings_unavailable(text):
+        return ()
     if not ordered:
         detected = discover_interfaces(text)
         detected_note = (

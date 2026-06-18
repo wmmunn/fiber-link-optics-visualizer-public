@@ -67,6 +67,9 @@ show interfaces transceiver detail
 
 It supports common compact threshold tables, Nexus row-based SFP diagnostics,
 and common Cisco interface names including `Gi`, `Te`, `Twe`, and `Eth`.
+Older modules that explicitly report DOM/DDM diagnostics as unsupported are
+treated as limited data rather than failed optics; directional loss is marked
+unavailable when Tx/Rx power is missing.
 
 Optional CDP-assisted discovery uses:
 

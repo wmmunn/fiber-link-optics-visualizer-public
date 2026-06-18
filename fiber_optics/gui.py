@@ -656,6 +656,20 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
 
         statuses = []
         for endpoint in (self.endpoint_a, self.endpoint_b):
+            if not endpoint.metrics:
+                status = "INFO"
+                statuses.append(status)
+                self._insert_result(
+                    status,
+                    f"{endpoint.label}: {endpoint.device}",
+                    "DOM readings",
+                    "Unavailable or unsupported by this transceiver module.",
+                    (
+                        f"{endpoint.label} - {endpoint.device} {endpoint.interface}\n"
+                        "This transceiver did not provide threshold-backed DOM readings. "
+                        "Optical power and directional loss cannot be evaluated for this side."
+                    ),
+                )
             for reading in endpoint.metrics:
                 status = self._display_status(reading.level)
                 statuses.append(status)
@@ -693,7 +707,9 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
             "ALARM"
             if "ALARM" in statuses
             else "WARN"
-            if "WARN" in statuses or "INFO" in statuses
+            if "WARN" in statuses
+            else "INFO"
+            if "INFO" in statuses
             else "PASS"
         )
         counts = {name: statuses.count(name) for name in ("ALARM", "WARN", "PASS", "INFO")}

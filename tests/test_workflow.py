@@ -53,6 +53,19 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(endpoint.source_file, "SSH: show interfaces Te1/1/1 transceiver detail")
         self.assertEqual(len(endpoint.metrics), 5)
 
+    def test_loads_live_ssh_text_when_dom_is_not_supported(self) -> None:
+        text = "Te1/1/1\nDigital optical monitoring is not supported on this module.\n"
+        endpoint = load_endpoint_text(
+            "Endpoint A",
+            "DIST-SW-A",
+            "Te1/1/1",
+            text,
+            endpoint_a_collected_at(),
+            "SSH: show interfaces Te1/1/1 transceiver detail",
+        )
+
+        self.assertEqual(endpoint.metrics, ())
+
     def test_rejects_oversized_log_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "too-large.log"
