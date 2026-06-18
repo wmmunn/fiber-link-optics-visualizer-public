@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=78.1.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -20,9 +20,9 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-gui = ["ttkbootstrap>=1.10"]
-ssh = ["netmiko>=4.4"]
-build = ["pyinstaller>=6.0", "ttkbootstrap>=1.10", "netmiko>=4.4"]
+gui = ["ttkbootstrap>=1.10,<2"]
+ssh = ["netmiko>=4.4,<5"]
+build = ["pyinstaller>=6,<7", "ttkbootstrap>=1.10,<2", "netmiko>=4.4,<5"]
 
 [project.scripts]
 fiber-optics = "fiber_optics.cli:main"
