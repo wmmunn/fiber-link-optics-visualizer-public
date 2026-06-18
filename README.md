@@ -1,6 +1,7 @@
 ﻿# Fiber Link Optics Visualizer
 
 [![tests](https://github.com/wmmunn/fiber-link-optics-visualizer-public/actions/workflows/tests.yml/badge.svg)](https://github.com/wmmunn/fiber-link-optics-visualizer-public/actions/workflows/tests.yml)
+[![Known Vulnerabilities](https://snyk.io/test/github/wmmunn/fiber-link-optics-visualizer-public/badge.svg?targetFile=requirements.txt)](https://snyk.io/test/github/wmmunn/fiber-link-optics-visualizer-public?targetFile=requirements.txt)
 
 A practical, operator-focused visualization of Cisco transceiver detail from both ends of a fiber link.
 
