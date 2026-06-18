@@ -15,9 +15,11 @@ bidirectional optical-loss estimates in the middle. It displays temperature,
 voltage, bias current, transmit power, receive power, device thresholds, and
 collection timestamps.
 
+![Sanitized Fiber Link Optics Visualizer GUI](docs/gui-preview.png)
+
 ![Sanitized dummy fiber optics report](docs/report-preview.png)
 
-The image uses synthetic readings. A complete browsable example is available
+The images use synthetic readings and placeholder device labels. A complete browsable example is available
 at [examples/dummy-report.html](examples/dummy-report.html).
 
 ## Version 0.3.5
