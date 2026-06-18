@@ -102,7 +102,7 @@ class ReportTests(unittest.TestCase):
         report = build_html_report(endpoint_a, endpoint_b, directions)
 
         self.assertIn("Limited Data", report)
-        self.assertIn("does not provide threshold-backed DOM readings", report)
+        self.assertIn("This transceiver does not support DOM output", report)
         self.assertIn("Unavailable", report)
 
 

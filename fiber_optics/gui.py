@@ -663,10 +663,10 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
                     status,
                     f"{endpoint.label}: {endpoint.device}",
                     "DOM readings",
-                    "Unavailable or unsupported by this transceiver module.",
+                    "This transceiver does not support DOM output.",
                     (
                         f"{endpoint.label} - {endpoint.device} {endpoint.interface}\n"
-                        "This transceiver did not provide threshold-backed DOM readings. "
+                        "This transceiver does not support DOM output. "
                         "Optical power and directional loss cannot be evaluated for this side."
                     ),
                 )

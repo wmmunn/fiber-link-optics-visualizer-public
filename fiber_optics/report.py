@@ -109,11 +109,11 @@ def _endpoint_panel(endpoint: EndpointReading, css_class: str) -> str:
             "<tr class='row-missing'>"
             "<td class='metric'>DOM</td>"
             "<td class='value'>n/a</td>"
-            "<td class='range-cell'>This module does not provide threshold-backed DOM readings.</td>"
+            "<td class='range-cell'>This transceiver does not support DOM output.</td>"
             "</tr>"
         )
         detail_rows.append(
-            "<tr><td>DOM readings</td><td colspan='5'>Unavailable or unsupported by this transceiver module.</td></tr>"
+            "<tr><td>DOM readings</td><td colspan='5'>This transceiver does not support DOM output, so optical power and directional loss cannot be evaluated from this side.</td></tr>"
         )
 
     return f"""
