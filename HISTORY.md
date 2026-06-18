@@ -1,5 +1,11 @@
 # Fiber Link Optics Visualizer History
 
+## Next
+
+- Added post-login `show version` platform autodetection for live SSH sessions
+  so IOS, IOS-XE, and NX-OS devices can use the correct read-only transceiver
+  command after connection.
+
 ## 0.3.5 - 2026-06-16
 
 - Added Nexus-style `SFP Detail Diagnostics Information` parsing so row-based

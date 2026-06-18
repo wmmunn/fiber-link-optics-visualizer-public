@@ -41,6 +41,17 @@ def validate_device_type(device_type: str) -> str:
     return cleaned
 
 
+def detect_device_type_from_show_version(output: str) -> str | None:
+    text = (output or "").lower()
+    if "nx-os" in text or "nexus" in text or "cisco nexus operating system" in text:
+        return "cisco_nxos"
+    if "ios xe" in text or "ios-xe" in text or "cisco ios xe software" in text:
+        return "cisco_xe"
+    if "cisco ios software" in text or "ios software" in text:
+        return "cisco_ios"
+    return None
+
+
 def build_transceiver_command(device_type: str, interface: str) -> str:
     normalized_device_type = validate_device_type(device_type)
     if normalized_device_type == "cisco_nxos":
@@ -89,6 +100,13 @@ class CiscoSshSession:
             )
         except Exception as exc:
             raise SshCollectorError(f"SSH login failed for {self.host}: {exc}") from exc
+
+    def detect_device_type(self) -> str | None:
+        output = self.command("show version")
+        detected = detect_device_type_from_show_version(output)
+        if detected:
+            self.device_type = detected
+        return detected
 
     def command(self, command: str) -> str:
         if self._connection is None:

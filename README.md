@@ -121,10 +121,12 @@ replacement for approval, change-control, or local security policy.
 The workflow is deliberately step-by-step:
 
 1. Enter Endpoint A device, Endpoint A interface, expected Endpoint B device,
-   SSH username, SSH port, and the matching `Device type` from the GUI
+   SSH username, SSH port, and the starting `Device type` from the GUI
    dropdown. Supported live choices are `cisco_ios`, `cisco_xe`, and
    `cisco_nxos`.
-2. Select **Connect A** and complete the interactive login flow.
+2. Select **Connect A** and complete the interactive login flow. After login,
+   the tool runs `show version` to refine the IOS/IOS-XE/NX-OS command family
+   when the platform can be identified.
 3. Select **Discover B via CDP** to run `show cdp neighbors detail`.
 4. Review and confirm the discovered B-side device and interface.
 5. Select **Collect A Optics** and confirm the read-only transceiver command.
@@ -136,6 +138,7 @@ The live collector uses only:
 
 ```text
 show cdp neighbors detail
+show version
 show interfaces <interface> transceiver detail
 show int <interface> transceiver details
 ```

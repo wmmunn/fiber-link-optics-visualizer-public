@@ -5,6 +5,7 @@ from fiber_optics.ssh_collector import (
     SshCollectorError,
     build_transceiver_command,
     check_tcp_reachable,
+    detect_device_type_from_show_version,
     validate_device_type,
 )
 
@@ -38,6 +39,21 @@ class SshCollectorTests(unittest.TestCase):
             build_transceiver_command("cisco_nxos", "Eth3/31"),
             "show int Eth3/31 transceiver details",
         )
+
+    def test_detects_nxos_from_show_version(self) -> None:
+        output = "Cisco Nexus Operating System (NX-OS) Software"
+        self.assertEqual(detect_device_type_from_show_version(output), "cisco_nxos")
+
+    def test_detects_ios_xe_from_show_version(self) -> None:
+        output = "Cisco IOS XE Software, Version 17.09.05"
+        self.assertEqual(detect_device_type_from_show_version(output), "cisco_xe")
+
+    def test_detects_ios_from_show_version(self) -> None:
+        output = "Cisco IOS Software, C2960X Software"
+        self.assertEqual(detect_device_type_from_show_version(output), "cisco_ios")
+
+    def test_returns_none_for_unrecognized_show_version(self) -> None:
+        self.assertIsNone(detect_device_type_from_show_version("unknown platform"))
 
 
 if __name__ == "__main__":

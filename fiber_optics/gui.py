@@ -506,12 +506,22 @@ class App(tb.Window if TTKBOOTSTRAP_AVAILABLE else tk.Tk):
         except SshCollectorError as exc:
             messagebox.showerror("SSH Login Failed", str(exc), parent=self)
             return
+        detection_note = ""
+        try:
+            detected_type = session.detect_device_type()
+            if detected_type:
+                self.ssh_device_type.set(detected_type)
+                detection_note = f" Detected platform: {detected_type}."
+            else:
+                detection_note = " Platform autodetect was inconclusive; using the selected device type."
+        except SshCollectorError as exc:
+            detection_note = f" Platform autodetect skipped: {exc}"
         if label == "A":
             self.a_session = session
         else:
             self.b_session = session
         self.ssh_status.set(
-            f"Connected to Endpoint {label}. Click the next collection step when ready."
+            f"Connected to Endpoint {label}.{detection_note} Click the next collection step when ready."
         )
 
     def discover_b_from_a(self) -> None:
